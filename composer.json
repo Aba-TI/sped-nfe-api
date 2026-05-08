@@ -53,7 +53,8 @@
     },
     "autoload": {
         "psr-4": {
-            "NFePHP\\NFe\\": "src/"
+            "NFePHP\\NFe\\": "src/",
+            "App\\": "app/"
         }
     },
     "autoload-dev": {

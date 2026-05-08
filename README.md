@@ -142,6 +142,104 @@ O processo de documentação ainda está no inicio, mas já existem alguns docum
 
 [Documentação](docs/Funcionalidades.md)
 
+## Microserviço HTTP com Docker
+
+Este repositório agora pode ser usado como microserviço HTTP em PHP para expor a biblioteca a outros sistemas, por exemplo um backend Node.js.
+
+### Subindo a API
+
+1. Copie o arquivo de exemplo de ambiente:
+
+```bash
+cp .env.example .env
+```
+
+2. Coloque seu certificado A1 `.pfx` em uma pasta como `certs/certificado.pfx`
+
+3. Ajuste o `.env`, principalmente:
+
+- `API_PORT`: porta publicada pelo Docker no seu `localhost`. Ex.: `8080`, `8081`, `9000`.
+- `API_ORIGIN_KEYS`: mapeia cada `Origin` para sua própria API key.
+- `NFE_*`: valores padrão opcionais para certificado, emitente e ambiente.
+
+Em cenário multiempresa, os dados fiscais podem continuar sendo enviados a cada requisição.
+
+4. Suba os containers:
+
+```bash
+docker compose up -d --build
+docker compose exec api composer install
+docker compose exec api composer dump-autoload
+
+```
+
+5. Teste a saúde da API:
+
+```bash
+curl http://localhost:${API_PORT:-8080}/health
+```
+
+### Segurança da API
+
+- A API aceita `X-API-Key: <chave>` ou `Authorization: Bearer <chave>`.
+- Cada `Origin` pode ter sua própria chave em `API_ORIGIN_KEYS`.
+- Exemplo: `http://localhost:3000=chave-front-3000,http://localhost:5173=chave-front-5173`.
+- Se o header `Origin` vier preenchido, ele precisa existir nesse mapeamento.
+- Requisições `OPTIONS` recebem resposta de preflight para CORS.
+- `GET /health` continua livre para monitoramento.
+
+### Certificado por upload no `curl`
+
+Além de `certPath` e `certBase64`, a API agora aceita `multipart/form-data` com o `.pfx` enviado como arquivo.
+
+Use o JSON principal no campo `payload`, o arquivo no campo `certificado` e a senha em `certificado_password`:
+
+```bash
+curl -X POST http://localhost:${API_PORT:-8080}/api/nfe/certificado/validar \
+  -H "Origin: http://localhost:3000" \
+  -H "X-API-Key: chave-front-3000" \
+  -F 'payload={
+    "uf":"MG",
+    "emitente":{
+      "cnpj":"12345678000199",
+      "razao_social":"EMPRESA EXEMPLO LTDA",
+      "ie":"123456789",
+      "crt":"3",
+      "endereco":{
+        "logradouro":"Rua Um",
+        "numero":"100",
+        "bairro":"Centro",
+        "codigo_municipio":"3106200",
+        "municipio":"Belo Horizonte",
+        "uf":"MG",
+        "cep":"30110000",
+        "telefone":"3133334444"
+      }
+    }
+  };type=application/json' \
+  -F "certificado=@/caminho/certificado.pfx" \
+  -F "certificado_password=sua-senha"
+```
+
+O mesmo padrão funciona nas demais rotas que exigem certificado.
+
+### Sobre as variáveis `NFE_*`
+
+Essas variáveis fazem sentido como fallback padrão do servidor, não como regra obrigatória por requisição.
+
+- `NFE_CERT_PATH`: faz sentido se você tiver um certificado fixo no servidor.
+- `NFE_CERT_PASSWORD`: faz sentido junto com `NFE_CERT_PATH` fixo.
+- `NFE_TPAMB`: faz sentido para definir produção `1` ou homologação `2` por padrão.
+- `NFE_RAZAO_SOCIAL`: faz sentido apenas como fallback.
+- `NFE_CNPJ`: faz sentido apenas se a API atender um único emitente fixo.
+- `NFE_SIGLA_UF`: faz sentido como fallback do emitente.
+- `NFE_SCHEMES`: faz sentido; controla o pacote de schemas XML.
+- `NFE_VERSAO`: faz sentido; controla a versão do layout.
+- `NFE_VERAPLIC`: faz sentido; identifica a versão da sua aplicação nas chamadas.
+
+Se sua API for multiempresa e o certificado vier por upload em cada chamada, os mais dispensáveis são `NFE_CERT_PATH`, `NFE_CERT_PASSWORD`, `NFE_CNPJ` e `NFE_RAZAO_SOCIAL`.
+
+
 ### Para tirar suas duvidas não inicie uma ISSUE, mas se inscreva no grupo do google [NFePHP](http://groups.google.com/group/nfephp).
  
 ## Contributing
