@@ -223,6 +223,34 @@ curl -X POST http://localhost:${API_PORT:-8080}/api/nfe/certificado/validar \
 
 O mesmo padrão funciona nas demais rotas que exigem certificado.
 
+### Distribuição de NF-e recebidas (modelo 55)
+
+`POST /api/nfe/distribuir` consulta **um lote** do Ambiente Nacional a partir de
+`ult_nsu`. A resposta devolve os XMLs descompactados, o próximo cursor em
+`ult_nsu` e o limite atual em `max_nsu`. Salve o cursor e faça a próxima consulta
+somente depois do intervalo determinado pela SEFAZ (ao terminar os documentos,
+no mínimo uma hora).
+
+O serviço não permite filtrar por data, não recupera NF-e emitidas pela própria
+empresa e não atende NFC-e (modelo 65). A SEFAZ mantém os documentos para
+distribuição por prazo limitado; documentos históricos podem retornar `cStat` 137
+ou rejeição 632.
+
+```bash
+curl -X POST http://localhost:${API_PORT:-8080}/api/nfe/distribuir \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "ambiente": 1,
+    "uf": "SP",
+    "cnpj": "12345678000199",
+    "ult_nsu": "000000000000000"
+  }'
+```
+
+O certificado A1 e a senha podem ser configurados uma vez no servidor por
+`NFE_CERT_PATH` e `NFE_CERT_PASSWORD`, ou enviados em cada chamada por
+`multipart/form-data`, como no exemplo anterior.
+
 ### Sobre as variáveis `NFE_*`
 
 Essas variáveis fazem sentido como fallback padrão do servidor, não como regra obrigatória por requisição.

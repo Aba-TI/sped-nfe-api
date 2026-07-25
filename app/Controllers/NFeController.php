@@ -23,6 +23,14 @@ final class NFeController
         return $this->success('Certificado validado com sucesso.', $this->service->validarCertificado(NFeRequestDTO::fromArray($request->body())));
     }
 
+    public function distribuir(Request $request): JsonResponse
+    {
+        return $this->success(
+            'Consulta de distribuição de NF-e realizada com sucesso.',
+            $this->service->distribuir(NFeRequestDTO::fromArray($request->body()))
+        );
+    }
+
     public function criar(Request $request): JsonResponse
     {
         return $this->success('NF-e criada com sucesso.', $this->service->criar(NFeRequestDTO::fromArray($request->body())));

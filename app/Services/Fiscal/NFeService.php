@@ -26,6 +26,17 @@ final class NFeService
     }
 
     /**
+     * Consulta um lote do serviço de Distribuição DF-e (modelo 55).
+     * O chamador deve persistir ult_nsu e usá-lo na próxima consulta.
+     *
+     * @return array<string, mixed>
+     */
+    public function distribuir(NFeRequestDTO $dto): array
+    {
+        return $this->sefazService->distribuir($dto->payload(), self::MODEL);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function criar(NFeRequestDTO $dto): array

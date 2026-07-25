@@ -45,6 +45,45 @@ final class SefazService
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
+    public function distribuir(array $payload, int $model): array
+    {
+        if ($model !== 55) {
+            throw new FiscalException(
+                'A distribuição DF-e desta API é exclusiva para NF-e modelo 55.',
+                'DIST_DFE_MODEL_NOT_SUPPORTED',
+                ['modelo' => $model],
+                422
+            );
+        }
+
+        $ultNsu = preg_replace('/\D/', '', (string) ($payload['ult_nsu'] ?? 0));
+        if (strlen($ultNsu) > 15) {
+            throw new FiscalException(
+                'ult_nsu deve ter no máximo 15 dígitos.',
+                'INVALID_ULT_NSU',
+                ['required_field' => 'ult_nsu'],
+                422
+            );
+        }
+
+        $context = $this->contextResolver->resolve($payload, $model, false);
+        if ((int) $context['tpAmb'] !== 1) {
+            throw new FiscalException(
+                'A distribuição DF-e só funciona em produção. Informe ambiente: 1.',
+                'DIST_DFE_PRODUCTION_REQUIRED',
+                ['required_field' => 'ambiente'],
+                422
+            );
+        }
+
+        $this->certificateService->assertAvailable($context);
+        return $this->adapter->distributeNFe($context, (int) $ultNsu);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
     public function create(array $payload, int $model): array
     {
         $context = $this->contextResolver->resolve($payload, $model);

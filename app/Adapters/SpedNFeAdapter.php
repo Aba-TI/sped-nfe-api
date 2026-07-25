@@ -339,6 +339,45 @@ final class SpedNFeAdapter
     }
 
     /**
+     * Consulta um lote do Ambiente Nacional por NSU e descompacta os documentos
+     * devolvidos pela SEFAZ. Não há filtro de data nesse webservice.
+     *
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    public function distributeNFe(array $context, int $ultNsu): array
+    {
+        $responseXml = $this->tools($context)->sefazDistDFe($ultNsu);
+        $response = $this->toArray($responseXml);
+        $documents = [];
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        if ($dom->loadXML($responseXml) !== false) {
+            foreach ($dom->getElementsByTagName('docZip') as $docZip) {
+                $encoded = trim((string) $docZip->nodeValue);
+                $decoded = base64_decode($encoded, true);
+                $xml = $decoded === false ? false : gzdecode($decoded);
+
+                $documents[] = [
+                    'nsu' => $docZip->getAttribute('NSU'),
+                    'schema' => $docZip->getAttribute('schema'),
+                    'xml' => $xml === false ? null : $xml,
+                    'decode_error' => $xml === false ? 'Não foi possível descompactar o documento retornado.' : null,
+                ];
+            }
+        }
+
+        return [
+            'cStat' => $response['cStat'] ?? null,
+            'xMotivo' => $response['xMotivo'] ?? null,
+            'ult_nsu' => $response['ultNSU'] ?? str_pad((string) $ultNsu, 15, '0', STR_PAD_LEFT),
+            'max_nsu' => $response['maxNSU'] ?? null,
+            'documentos' => $documents,
+            'response_xml' => $responseXml,
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
